@@ -49,7 +49,11 @@ func (r *Renderer) Render(s *state.State, winHeight, winWidth int) string {
 
 	// section is half a screen, devided vertically
 	// left for tree, right for file preview
-	sectionWidth := int(math.Floor(0.5 * float64(winWidth)))
+	sectionSize := 1.0
+	if s.PreviewToggle {
+		sectionSize = 0.5
+	}
+	sectionWidth := int(math.Floor(sectionSize * float64(winWidth)))
 
 	renderedTree := r.renderTree(s.Tree, winHeight-headLen, sectionWidth)
 
@@ -57,11 +61,18 @@ func (r *Renderer) Render(s *state.State, winHeight, winWidth int) string {
 
 	if s.HelpToggle {
 		renderedHelp, helpLen := r.renderHelp(sectionWidth)
-		renderedContent := r.renderSelectedFileContent(s.Tree, winHeight-headLen-helpLen, sectionWidth)
-		rightPane = lipgloss.JoinVertical(lipgloss.Left, renderedHelp, renderedContent)
+		if s.PreviewToggle {
+			renderedContent := r.renderSelectedFileContent(s.Tree, winHeight-headLen-helpLen, sectionWidth)
+			rightPane = lipgloss.JoinVertical(lipgloss.Left, renderedHelp, renderedContent)
+		} else {
+
+			rightPane = lipgloss.JoinVertical(lipgloss.Left, renderedHelp)
+		}
 	} else {
-		renderedContent := r.renderSelectedFileContent(s.Tree, winHeight-headLen, sectionWidth)
-		rightPane = renderedContent
+		if s.PreviewToggle {
+			renderedContent := r.renderSelectedFileContent(s.Tree, winHeight-headLen, sectionWidth)
+			rightPane = renderedContent
+		}
 	}
 
 	renderedTreeWithContent := lipgloss.JoinHorizontal(
@@ -99,9 +110,9 @@ func (r *Renderer) renderHeading(s *state.State, width int) (string, int) {
 		operationBar += fmt.Sprintf(" [%s]", markedPath)
 	}
 
-	if s.OpBuf.IsInput() {
-		operationBar += fmt.Sprintf(" │ %s │", r.Style.OperationBarInput.Render(string(s.InputBuf)))
-	}
+	// if s.OpBuf.IsInput() {
+	// 	operationBar += fmt.Sprintf(" │ %s │", r.Style.OperationBarInput.Render(string(s.InputBuf)))
+	// }
 
 	rawPath := "> " + path
 
@@ -123,7 +134,16 @@ func (r *Renderer) renderHeading(s *state.State, width int) (string, int) {
 			r.Style.HelpMsg.Render(helpPreview),
 		finfo,
 		r.Style.OperationBar.Render(operationBar),
-		r.Style.ErrBar.Render(s.ErrBuf),
+	}
+	if s.OpBuf.IsInput() {
+		header = append(header,
+			r.Style.OperationBar.Render(fmt.Sprintf("-> %s", r.Style.OperationBarInput.Render(string(s.InputBuf)))),
+		)
+	}
+	if s.ErrBuf != "" {
+		header = append(header,
+			r.Style.ErrBar.Render(s.ErrBuf),
+		)
 	}
 	return strings.Join(header, "\n"), len(header)
 }
@@ -144,6 +164,7 @@ func (r *Renderer) renderHelp(width int) (string, int) {
 		"G              Go to last child in current directory",
 		"enter          Collapse / expand selected directory",
 		"esc            Clear error message / stop current operation",
+		"\"             Toggle file content",
 		"q / ctrl+c     Exit",
 	}
 	return r.Style.

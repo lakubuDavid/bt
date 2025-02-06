@@ -1,10 +1,11 @@
 package state
 
 import (
-	t "github.com/LeperGnome/bt/internal/tree"
-	tea "github.com/charmbracelet/bubbletea"
 	"os"
 	"os/exec"
+
+	t "github.com/LeperGnome/bt/internal/tree"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 type Operation int
@@ -44,12 +45,13 @@ func (o Operation) IsInput() bool {
 }
 
 type State struct {
-	Tree        *t.Tree
-	OpBuf       Operation
-	InputBuf    []rune
-	ErrBuf      string
-	NodeChanges <-chan t.NodeChange
-	HelpToggle  bool
+	Tree          *t.Tree
+	OpBuf         Operation
+	InputBuf      []rune
+	ErrBuf        string
+	NodeChanges   <-chan t.NodeChange
+	HelpToggle    bool
+	PreviewToggle bool
 }
 
 func InitState(root string) (*State, error) {
@@ -269,6 +271,8 @@ func (s *State) processKeyDefault(msg tea.KeyMsg) tea.Cmd {
 		}
 	case "?":
 		s.HelpToggle = !s.HelpToggle
+	case "\"":
+		s.PreviewToggle = !s.PreviewToggle
 	case "enter":
 		err := s.Tree.CollapseOrExpandSelected()
 		if err != nil {
